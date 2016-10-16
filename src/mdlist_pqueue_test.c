@@ -61,6 +61,10 @@ int main()
 		printf("Contains: 0x%x\n", 0x12346679);
 
 	/* Dequeue operations */
+	test_node = mdlist_pqueue_deq_key(&myhead, 0x12346679);
+	if (test_node)
+		printf("dequeue_key_node: 0x%x\n", test_node->key);
+
 	for (i = 0; i < 7; i++) {
 		test_node = mdlist_pqueue_deq(&myhead);
 		if (test_node)

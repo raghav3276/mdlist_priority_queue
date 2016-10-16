@@ -167,9 +167,39 @@ int mdlist_pqueue_enq(struct mdlist_pqueue_head *head,
 	return 0;
 }
 
-int mdlist_pqueue_deq(struct mdlist_pqueue_head *head, uint32_t key)
+struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
 {
-	return 0;
+	uint32_t i;
+	uint32_t n_1d_keys = (1 << MDLIST_PQUEUE_DIM_1_SIZE) - 1;
+	struct mdlist_pqueue_node *node_2d = NULL;
+	struct mdlist_pqueue_node *node_3d = NULL;
+	struct mdlist_pqueue_node *node = NULL;
+
+	/* Linear traversal until an element with an address is encountered */
+	for (i = 0; i < n_1d_keys && !head->child[i]; i++);
+
+	/* List empty! */
+	if (n_1d_keys == i)
+		return NULL;
+
+	/* Extract the node */
+	node_2d = head->child[i];
+	node_3d = node_2d->child;
+	node = node_3d->child;
+
+	/* Undo the links */
+	node_3d->child = node->next;
+	if (!node_3d->child) {
+		node_2d->child = node_3d->next;
+		free(node_3d);
+	}
+
+	if (!node_2d->child) {
+		head->child[i] = node_2d->next;
+		free(node_2d);
+	}
+
+	return node;
 }
 
 /* Check if the portion of the key exists in the corresponding dimension */

@@ -33,7 +33,8 @@ struct mdlist_pqueue_head {
 
 extern int mdlist_pqueue_enq(struct mdlist_pqueue_head *head,
 		struct mdlist_pqueue_node *node);
-extern int mdlist_pqueue_deq(struct mdlist_pqueue_head *head, uint32_t key);
+extern struct mdlist_pqueue_node *mdlist_pqueue_deq(
+		struct mdlist_pqueue_head *head);
 extern struct mdlist_pqueue_node *mdlist_pqueue_contains(
 		struct mdlist_pqueue_head *head, uint32_t key);
 

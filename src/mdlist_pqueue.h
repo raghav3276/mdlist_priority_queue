@@ -33,8 +33,15 @@ struct mdlist_pqueue_head {
 
 extern int mdlist_pqueue_enq(struct mdlist_pqueue_head *head,
 		struct mdlist_pqueue_node *node);
+
+/* Dequeue the node with the highest priority (least key value) */
 extern struct mdlist_pqueue_node *mdlist_pqueue_deq(
 		struct mdlist_pqueue_head *head);
+
+/* Dequeue the node with highest priority for the given key */
+extern struct mdlist_pqueue_node *mdlist_pqueue_deq_key(
+		struct mdlist_pqueue_head *head, uint32_t key);
+
 extern struct mdlist_pqueue_node *mdlist_pqueue_contains(
 		struct mdlist_pqueue_head *head, uint32_t key);
 

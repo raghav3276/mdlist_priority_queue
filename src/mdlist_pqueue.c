@@ -167,41 +167,6 @@ int mdlist_pqueue_enq(struct mdlist_pqueue_head *head,
 	return 0;
 }
 
-struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
-{
-	uint32_t i;
-	uint32_t n_1d_keys = (1 << MDLIST_PQUEUE_DIM_1_SIZE) - 1;
-	struct mdlist_pqueue_node *node_2d = NULL;
-	struct mdlist_pqueue_node *node_3d = NULL;
-	struct mdlist_pqueue_node *node = NULL;
-
-	/* Linear traversal until an element with an address is encountered */
-	for (i = 0; i < n_1d_keys && !head->child[i]; i++);
-
-	/* List empty! */
-	if (n_1d_keys == i)
-		return NULL;
-
-	/* Extract the node */
-	node_2d = head->child[i];
-	node_3d = node_2d->child;
-	node = node_3d->child;
-
-	/* Undo the links */
-	node_3d->child = node->next;
-	if (!node_3d->child) {
-		node_2d->child = node_3d->next;
-		free(node_3d);
-	}
-
-	if (!node_2d->child) {
-		head->child[i] = node_2d->next;
-		free(node_2d);
-	}
-
-	return node;
-}
-
 /* Check if the portion of the key exists in the corresponding dimension */
 static struct mdlist_pqueue_node *mdlist_pqueue_contains_node(
 		struct mdlist_pqueue_node *node_d, uint32_t key_d)
@@ -261,6 +226,90 @@ struct mdlist_pqueue_node *mdlist_pqueue_contains(
 		return NULL;
 
 	return mdlist_pqueue_contains_node(node_3d->child, key);
+}
+
+struct mdlist_pqueue_node *mdlist_pqueue_deq_key(struct mdlist_pqueue_head *head,
+		uint32_t key)
+{
+	uint32_t key_1d = mdlist_pqueue_get_1d_key(key);
+	struct mdlist_pqueue_node *node_2d = NULL;
+	struct mdlist_pqueue_node *node_3d = NULL;
+	struct mdlist_pqueue_node *node = NULL;
+
+	/* The function is similar to that of the mdlist_pqueue_contains().
+	 * But, here we are redefining the function as the pointers node_2d
+	 * and node_3d are required for the unlink process.
+	 * The unlink follows the same approach as that of the regular dequeue
+	 * operation.
+	 */
+
+	if (!head && !head->child[key_1d])
+		return NULL;
+
+	node_2d = mdlist_pqueue_contains_2d_node(head->child[key_1d], key);
+	if (!node_2d)
+		return NULL;
+
+	node_3d = mdlist_pqueue_contains_3d_node(node_2d->child, key);
+	if (!node_3d)
+		return NULL;
+
+	node = mdlist_pqueue_contains_node(node_3d->child, key);
+
+	if (!node)
+		return NULL;
+
+	/* Undo the links */
+	node_3d->child = node->next;
+	if (!node_3d->child) {
+		node_2d->child = node_3d->next;
+		free(node_3d);
+	}
+
+	if (!node_2d->child) {
+		head->child[key_1d] = node_2d->next;
+		free(node_2d);
+	}
+
+	return node;
+}
+
+struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
+{
+	uint32_t i;
+	uint32_t n_1d_keys = (1 << MDLIST_PQUEUE_DIM_1_SIZE) - 1;
+	struct mdlist_pqueue_node *node_2d = NULL;
+	struct mdlist_pqueue_node *node_3d = NULL;
+	struct mdlist_pqueue_node *node = NULL;
+
+	if (!head)
+		return NULL;
+
+	/* Linear traversal until an element with an address is encountered */
+	for (i = 0; i < n_1d_keys && !head->child[i]; i++);
+
+	/* List empty! */
+	if (n_1d_keys == i)
+		return NULL;
+
+	/* Extract the node */
+	node_2d = head->child[i];
+	node_3d = node_2d->child;
+	node = node_3d->child;
+
+	/* Undo the links */
+	node_3d->child = node->next;
+	if (!node_3d->child) {
+		node_2d->child = node_3d->next;
+		free(node_3d);
+	}
+
+	if (!node_2d->child) {
+		head->child[i] = node_2d->next;
+		free(node_2d);
+	}
+
+	return node;
 }
 
 void mdlist_pqueue_init_node(struct mdlist_pqueue_node *node, uint32_t key)

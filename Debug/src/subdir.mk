@@ -4,13 +4,16 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../src/mdlist_pqueue.c 
+../src/mdlist_pqueue.c \
+../src/mdlist_pqueue_test.c 
 
 OBJS += \
-./src/mdlist_pqueue.o 
+./src/mdlist_pqueue.o \
+./src/mdlist_pqueue_test.o 
 
 C_DEPS += \
-./src/mdlist_pqueue.d 
+./src/mdlist_pqueue.d \
+./src/mdlist_pqueue_test.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

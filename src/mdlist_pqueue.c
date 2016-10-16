@@ -139,7 +139,6 @@ static void mdlist_pqueue_add_node(struct mdlist_pqueue_node *node_3d,
 	curr->next = node;
 }
 
-/* TODO: Change the interface: Remove the last argument */
 int mdlist_pqueue_enq(struct mdlist_pqueue_head *head,
 		struct mdlist_pqueue_node *node)
 {

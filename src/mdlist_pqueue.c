@@ -3,10 +3,20 @@
 
 #include "mdlist_pqueue.h"
 
+static inline uint32_t mdlist_pqueue_get_1d_key(uint32_t key)
+{
+	return (key >> MDLIST_PQUEUE_TOP_DIM_BIT_SHIFT);
+}
+
 static inline uint32_t mdlist_pqueue_get_2d_key(uint32_t key)
 {
 	return ((key >> MDLIST_PQUEUE_DIM_3_SIZE) &
 			((1 << MDLIST_PQUEUE_DIM_2_SIZE) - 1));
+}
+
+static inline uint32_t mdlist_pqueue_get_3d_key(uint32_t key)
+{
+	return (key & ((1 << MDLIST_PQUEUE_DIM_3_SIZE) - 1));
 }
 
 static struct mdlist_pqueue_node *mdlist_pqueue_new_2d_node(uint32_t key)
@@ -26,18 +36,18 @@ static struct mdlist_pqueue_node *mdlist_pqueue_new_2d_node(uint32_t key)
 static struct mdlist_pqueue_node *mdlist_pqueue_get_2d_node(
 		struct mdlist_pqueue_head *head, uint32_t key)
 {
-	uint32_t key_top_dim = (key >> MDLIST_PQUEUE_TOP_DIM_BIT_SHIFT);
+	uint32_t key_1d = mdlist_pqueue_get_1d_key(key);
 	struct mdlist_pqueue_node *node_2d = NULL;
 
-	if (!head->child[key_top_dim]) {
+	if (!head->child[key_1d]) {
 		/* The address holder in the array is empty */
 		node_2d = mdlist_pqueue_new_2d_node(key);
 		if (!node_2d)
 			return NULL;
 
-		head->child[key_top_dim] = node_2d;
+		head->child[key_1d] = node_2d;
 	} else {
-		struct mdlist_pqueue_node *curr = head->child[key_top_dim];
+		struct mdlist_pqueue_node *curr = head->child[key_1d];
 		uint32_t key_2d = mdlist_pqueue_get_2d_key(key);
 		uint32_t curr_key_2d = curr->key;
 
@@ -63,11 +73,6 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_2d_node(
 	}
 
 	return node_2d;
-}
-
-static inline uint32_t mdlist_pqueue_get_3d_key(uint32_t key)
-{
-	return (key & ((1 << MDLIST_PQUEUE_DIM_3_SIZE) - 1));
 }
 
 static struct mdlist_pqueue_node *mdlist_pqueue_new_3d_node(uint32_t key)

@@ -83,7 +83,7 @@ static struct mdlist_pqueue_node *mdlist_pqueue_new_3d_node(uint32_t key)
 	if(!new_node)
 		return NULL;
 
-	new_node->key = mdlist_pqueue_get_2d_key(key);
+	new_node->key = mdlist_pqueue_get_3d_key(key);
 
 	return new_node;
 }
@@ -95,7 +95,7 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_3d_node(
 
 	if (!node_2d->child) {
 		node_3d = mdlist_pqueue_new_3d_node(key);
-		if (!key)
+		if (!node_3d)
 			return NULL;
 
 		node_2d->child = node_3d;
@@ -151,7 +151,7 @@ int mdlist_pqueue_enq(struct mdlist_pqueue_head *head,
 	struct mdlist_pqueue_node *node_2d = NULL;
 	struct mdlist_pqueue_node *node_3d = NULL;
 
-	if (!node)
+	if (!node || !head)
 		return -EINVAL;
 
 	node_2d = mdlist_pqueue_get_2d_node(head, key);
@@ -172,9 +172,65 @@ int mdlist_pqueue_deq(struct mdlist_pqueue_head *head, uint32_t key)
 	return 0;
 }
 
-int mdlist_pqueue_contains(struct mdlist_pqueue_head *head, uint32_t key)
+/* Check if the portion of the key exists in the corresponding dimension */
+static struct mdlist_pqueue_node *mdlist_pqueue_contains_node(
+		struct mdlist_pqueue_node *node_d, uint32_t key_d)
 {
-	return 0;
+	struct mdlist_pqueue_node *curr = node_d;
+
+	if (!curr)
+		return NULL;
+
+	while (curr->key < key_d) {
+		curr = curr->next;
+		if (!curr)
+			break;
+	}
+
+	if (curr && key_d == curr->key)
+		return curr;
+	else
+		return NULL;
+}
+
+static struct mdlist_pqueue_node *mdlist_pqueue_contains_2d_node(
+		struct mdlist_pqueue_node *node_1d, uint32_t key)
+{
+	uint32_t key_2d = mdlist_pqueue_get_2d_key(key);
+
+	return mdlist_pqueue_contains_node(node_1d, key_2d);
+}
+
+static struct mdlist_pqueue_node *mdlist_pqueue_contains_3d_node(
+		struct mdlist_pqueue_node *node_2d, uint32_t key)
+{
+	uint32_t key_3d = mdlist_pqueue_get_3d_key(key);
+
+	return mdlist_pqueue_contains_node(node_2d, key_3d);
+}
+
+struct mdlist_pqueue_node *mdlist_pqueue_contains(
+		struct mdlist_pqueue_head *head, uint32_t key)
+{
+	uint32_t key_1d = mdlist_pqueue_get_1d_key(key);
+	struct mdlist_pqueue_node *node_2d = NULL;
+	struct mdlist_pqueue_node *node_3d = NULL;
+
+	if (!head)
+		return NULL;
+
+	if (!head->child[key_1d])
+		return NULL;
+
+	node_2d = mdlist_pqueue_contains_2d_node(head->child[key_1d], key);
+	if (!node_2d)
+		return NULL;
+
+	node_3d = mdlist_pqueue_contains_3d_node(node_2d->child, key);
+	if (!node_3d)
+		return NULL;
+
+	return mdlist_pqueue_contains_node(node_3d->child, key);
 }
 
 void mdlist_pqueue_init_node(struct mdlist_pqueue_node *node, uint32_t key)

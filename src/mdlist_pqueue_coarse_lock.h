@@ -9,6 +9,19 @@ struct mdlist_pqueue_head_coarse {
 	pthread_mutex_t lock;
 };
 
+extern int mdlist_pqueue_coarse_enq
+	(struct mdlist_pqueue_head_coarse *mdlist_queue_coarse_head,
+	struct mdlist_pqueue_node *node);
+
+extern struct mdlist_pqueue_node *mdlist_pqueue_coarse_deq(
+	struct mdlist_pqueue_head_coarse *mdlist_queue_coarse_head);
+
+extern struct mdlist_pqueue_node *mdlist_pqueue_coarse_deq_key(
+	struct mdlist_pqueue_head_coarse *mdlist_queue_coarse_head, uint32_t key);
+
+extern struct mdlist_pqueue_node *mdlist_pqueue_coarse_contains(
+	struct mdlist_pqueue_head_coarse *mdlist_queue_coarse_head, uint32_t key);
+
 extern struct mdlist_pqueue_head_coarse *mdlist_pqueue_coarse_alloc(void);
 
 extern void mdlist_pqueue_coarse_dealloc

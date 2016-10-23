@@ -38,17 +38,22 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_2d_node(
 {
 	uint32_t key_1d = mdlist_pqueue_get_1d_key(key);
 	struct mdlist_pqueue_node *node_2d = NULL;
+	struct mdlist_pqueue_node *curr = head->child[key_1d];
+	uint32_t key_2d = mdlist_pqueue_get_2d_key(key);
 
-	if (!head->child[key_1d]) {
+	if (!curr || key_2d < curr->key) {
 		/* The address holder in the array is empty */
 		node_2d = mdlist_pqueue_new_2d_node(key);
 		if (!node_2d)
 			return NULL;
 
 		head->child[key_1d] = node_2d;
+
+		/* Node replaced the existing first node */
+		if (key_2d < curr->key)
+			node_2d->next = curr;
+
 	} else {
-		struct mdlist_pqueue_node *curr = head->child[key_1d];
-		uint32_t key_2d = mdlist_pqueue_get_2d_key(key);
 		uint32_t curr_key_2d = curr->key;
 
 		/* Travel until the 2d_key is found */
@@ -92,16 +97,21 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_3d_node(
 		struct mdlist_pqueue_node *node_2d, uint32_t key)
 {
 	struct mdlist_pqueue_node *node_3d = NULL;
+	struct mdlist_pqueue_node *curr = node_2d->child;
+	uint32_t key_3d = mdlist_pqueue_get_3d_key(key);
 
-	if (!node_2d->child) {
+	if (!curr || key_3d < curr->key) {
 		node_3d = mdlist_pqueue_new_3d_node(key);
 		if (!node_3d)
 			return NULL;
 
 		node_2d->child = node_3d;
+
+		/* Node replaced the existing first node */
+		if (key_3d < curr->key)
+			node_3d->next = curr;
+
 	} else {
-		struct mdlist_pqueue_node *curr = node_2d->child;
-		uint32_t key_3d = mdlist_pqueue_get_3d_key(key);
 		uint32_t curr_key_3d = curr->key;
 
 		/* Travel until the 2d_key is found */

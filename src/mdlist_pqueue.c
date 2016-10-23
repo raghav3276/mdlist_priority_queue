@@ -50,7 +50,7 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_2d_node(
 		head->child[key_1d] = node_2d;
 
 		/* Node replaced the existing first node */
-		if (key_2d < curr->key)
+		if (curr && key_2d < curr->key)
 			node_2d->next = curr;
 
 	} else {
@@ -108,7 +108,7 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_3d_node(
 		node_2d->child = node_3d;
 
 		/* Node replaced the existing first node */
-		if (key_3d < curr->key)
+		if (curr && key_3d < curr->key)
 			node_3d->next = curr;
 
 	} else {

@@ -28,6 +28,7 @@ static struct mdlist_pqueue_node *mdlist_pqueue_new_2d_node(uint32_t key)
 		return NULL;
 
 	new_node->key = mdlist_pqueue_get_2d_key(key);
+	new_node->child = new_node->next = NULL;
 
 	return new_node;
 }
@@ -89,6 +90,7 @@ static struct mdlist_pqueue_node *mdlist_pqueue_new_3d_node(uint32_t key)
 		return NULL;
 
 	new_node->key = mdlist_pqueue_get_3d_key(key);
+	new_node->child = new_node->next = NULL;
 
 	return new_node;
 }
@@ -149,7 +151,7 @@ static void mdlist_pqueue_add_node(struct mdlist_pqueue_node *node_3d,
 		return;
 	}
 
-	for(;curr->next; curr = curr->next);
+	for (;curr->next; curr = curr->next);
 
 	curr->next = node;
 }
@@ -325,6 +327,7 @@ struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
 void mdlist_pqueue_init_node(struct mdlist_pqueue_node *node, uint32_t key)
 {
 	node->key = key;
+	node->child = node->next = NULL;
 }
 
 struct mdlist_pqueue_node *mdlist_pqueue_alloc_node(uint32_t key)

@@ -34,7 +34,7 @@ void *test_thread(void *arg)
 			nodes[i] = mdlist_pqueue_alloc_node(i + 0x12345678);
 			if (nodes[i] && !mdlist_pqueue_coarse_enq(myhead, nodes[i])) {
 #ifdef TEST_DEBUG
-				printf("Enqueue: 0x%x\n", i + 0x12345678, nodes[i]);
+				printf("Enqueue: 0x%x\n", i + 0x12345678);
 #endif
 			}
 		}

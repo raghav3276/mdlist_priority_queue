@@ -82,6 +82,7 @@ struct mdlist_pqueue_head_coarse *mdlist_pqueue_coarse_alloc(void)
 		return NULL;
 
 	pthread_mutex_init(&mdlist_coarse->lock, NULL);
+	mdlist_pqueue_init_head(&mdlist_coarse->head);
 
 	return mdlist_coarse;
 }

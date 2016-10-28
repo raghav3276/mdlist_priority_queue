@@ -39,11 +39,15 @@ struct mdlist_pqueue_node {
 /*
  * mdlist_pqueue_head: Represents an mdlist for priority queue.
  *
+ * @deq_idx: Holds the index in the array of pointers which points to the
+ * highest priority element. In otherwords, it points to the first non-NULL
+ * element in the array. Useful for optimized dequeue performance.
  * @child: An array of pointers of type struct mdlist_pqueue_node.
  * As this is the first dimension, all the pointers are stored as
  * an array for O(1) access.
  */
 struct mdlist_pqueue_head {
+	uint8_t deq_idx;
 	struct mdlist_pqueue_node *child[1 << MDLIST_PQUEUE_DIM_1_SIZE];
 };
 
@@ -102,5 +106,12 @@ extern struct mdlist_pqueue_node *mdlist_pqueue_alloc_node(uint32_t key);
  * @key: The key with which the node has to be initialized.
  */
 extern void mdlist_pqueue_init_node(struct mdlist_pqueue_node *node, uint32_t key);
+
+/*
+ * mdlist_pqueue_init_head: Initializes the head.
+ *
+ * @head: The head pointer representing this mdlist priority queue.
+ */
+extern void mdlist_pqueue_init_head(struct mdlist_pqueue_head *head);
 
 #endif /* MDLIST_PQUEUE_H_ */

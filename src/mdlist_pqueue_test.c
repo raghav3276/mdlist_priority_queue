@@ -1,80 +1,104 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <pthread.h>
+#include <semaphore.h>
 
-#include "mdlist_pqueue.h"
+#include "mdlist_pqueue_coarse_lock.h"
 
-struct mdlist_pqueue_head myhead;
+#define TEST_DEBUG
 
-struct mdlist_pqueue_node node1;
-struct mdlist_pqueue_node *node2, *node3, *node4, *node5, *node6;
-struct mdlist_pqueue_node *test_node;
+#define N_NODES		3
+#define N_THREADS	32
+#define	N_THREAD_LOOPS	10
+
+sem_t thread_wait_sem;
+
+struct mdlist_pqueue_head_coarse *myhead;
+
+void *test_thread(void *arg)
+{
+	int i, j;
+
+	struct mdlist_pqueue_node *nodes[N_NODES];
+	struct mdlist_pqueue_node *test_node;
+
+	for (j = 0; j < N_THREAD_LOOPS;  j++) {
+#ifdef TEST_DEBUG
+		printf("------------------------------------------\n");
+		printf("j = %d\n", j);
+#endif
+
+		/* Examples of nodes created dynamically */
+		for (i = 0; i < N_NODES; i++) {
+			nodes[i] = mdlist_pqueue_alloc_node(i + 0x12345678);
+			if (nodes[i] && !mdlist_pqueue_coarse_enq(myhead, nodes[i])) {
+#ifdef TEST_DEBUG
+				printf("Enqueue: 0x%x\n", i + 0x12345678);
+#endif
+			}
+		}
+
+		/* Test if the list contains the nodes with the keys */
+		for (i = 0; i < N_NODES; i++) {
+			if (mdlist_pqueue_coarse_contains(myhead, i + 0x12345678)) {
+#ifdef TEST_DEBUG
+				printf("Contains: 0x%x\n", i + 0x12345678);
+#endif
+			}
+		}
+
+		/* Dequeue operations */
+		test_node = mdlist_pqueue_coarse_deq_key(myhead, 0x12346679);
+		if (test_node) {
+#ifdef TEST_DEBUG
+			printf("dequeue_key_node: 0x%x\n", test_node->key);
+#endif
+		}
+
+		for (i = 0; i < N_NODES + 1; i++) {
+			test_node = mdlist_pqueue_coarse_deq(myhead);
+			if (test_node) {
+#ifdef TEST_DEBUG
+				printf("dequeue_node: 0x%x\n", test_node->key);
+#endif
+			}
+		}
+
+		for (i = 0; i < N_NODES; i++) {
+			/* Leave the following line commented, as the same deallocated
+			 * are being created as new nodes which resulted in an infinite
+			 * traversal.
+			 */
+			/* TODO: Need to fix this issue */
+//			free(nodes[i]);
+		}
+	}
+
+	sem_post(&thread_wait_sem);
+
+	return NULL;
+}
 
 int main()
 {
 	int i;
+	pthread_t thrd;
 
-	/* Example of node created statically */
-	mdlist_pqueue_init_node(&node1, 0x12345678);
-	mdlist_pqueue_enq(&myhead, &node1);
+	myhead = mdlist_pqueue_coarse_alloc();
+	if (!myhead)
+		return -errno;
 
-	/* Examples of nodes created dynamically */
-	node2 = mdlist_pqueue_alloc_node(0x12346678);
-	if(node2)
-		mdlist_pqueue_enq(&myhead, node2);
+	sem_init(&thread_wait_sem, 0, 0);
 
-	node3 = mdlist_pqueue_alloc_node(0x12346679);
-	if (node3)
-		mdlist_pqueue_enq(&myhead, node3);
-
-	node4 = mdlist_pqueue_alloc_node(0x12345679);
-	if (node4)
-		mdlist_pqueue_enq(&myhead, node4);
-
-	node5 = mdlist_pqueue_alloc_node(0x11345679);
-	if (node5)
-		mdlist_pqueue_enq(&myhead, node5);
-
-	node6 = mdlist_pqueue_alloc_node(0x12346679);
-	if (node6)
-		mdlist_pqueue_enq(&myhead, node6);
-
-	/* Test if the list contains the nodes with the keys */
-	if (mdlist_pqueue_contains(&myhead, 0x12345678))
-		printf("Contains: 0x%x\n", 0x12345678);
-
-	if (mdlist_pqueue_contains(&myhead, 0x12346678))
-		printf("Contains: 0x%x\n", 0x12346678);
-
-	if (mdlist_pqueue_contains(&myhead, 0x12346679))
-		printf("Contains: 0x%x\n", 0x12346679);
-
-	if (mdlist_pqueue_contains(&myhead, 0x12345679))
-		printf("Contains: 0x%x\n", 0x12345679);
-
-	if (mdlist_pqueue_contains(&myhead, 0x11345679))
-		printf("Contains: 0x%x\n", 0x11345679);
-
-	if (mdlist_pqueue_contains(&myhead, 0x11111111))
-		printf("Contains: 0x%x\n", 0x11111111);
-
-	if (mdlist_pqueue_contains(&myhead, 0x12346679))
-		printf("Contains: 0x%x\n", 0x12346679);
-
-	/* Dequeue operations */
-	test_node = mdlist_pqueue_deq_key(&myhead, 0x12346679);
-	if (test_node)
-		printf("dequeue_key_node: 0x%x\n", test_node->key);
-
-	for (i = 0; i < 7; i++) {
-		test_node = mdlist_pqueue_deq(&myhead);
-		if (test_node)
-			printf("dequeue_node: 0x%x\n", test_node->key);
+	for (i = 0; i < N_THREADS; i++) {
+		pthread_create(&thrd, NULL, test_thread, NULL);
 	}
 
-	free(node2);
-	free(node3);
-	free(node4);
-	free(node5);
+	for (i = 0; i < N_THREADS; i++)
+		sem_wait(&thread_wait_sem);
+
+	mdlist_pqueue_coarse_dealloc(myhead);
 
 	return 0;
 }

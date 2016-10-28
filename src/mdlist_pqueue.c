@@ -54,6 +54,10 @@ static struct mdlist_pqueue_node *mdlist_pqueue_get_2d_node(
 		if (curr && key_2d < curr->key)
 			node_2d->next = curr;
 
+		/* Update the deq_idx if required */
+		if (key_1d < head->deq_idx)
+			head->deq_idx = key_1d;
+
 	} else {
 		uint32_t curr_key_2d = curr->key;
 
@@ -151,7 +155,7 @@ static void mdlist_pqueue_add_node(struct mdlist_pqueue_node *node_3d,
 		return;
 	}
 
-	for(;curr->next; curr = curr->next);
+	for (;curr->next; curr = curr->next);
 
 	curr->next = node;
 }
@@ -240,6 +244,20 @@ struct mdlist_pqueue_node *mdlist_pqueue_contains(
 	return mdlist_pqueue_contains_node(node_3d->child, key);
 }
 
+void mdlist_pqueue_update_dqueue_idx(struct mdlist_pqueue_head *head)
+{
+	uint8_t i;
+	uint32_t n_1d_keys = (1 << MDLIST_PQUEUE_DIM_1_SIZE) - 1;
+
+	for (i = 0; i < n_1d_keys && !head->child[i]; i++);
+
+	/* List is empty! */
+	if (i == n_1d_keys)
+		head->deq_idx = 0xff;
+	else
+		head->deq_idx = i;
+}
+
 struct mdlist_pqueue_node *mdlist_pqueue_deq_key(struct mdlist_pqueue_head *head,
 		uint32_t key)
 {
@@ -283,13 +301,16 @@ struct mdlist_pqueue_node *mdlist_pqueue_deq_key(struct mdlist_pqueue_head *head
 		free(node_2d);
 	}
 
+	/* Update the deq_idx if the last node of this array element is deleted */
+	if (!head->child[head->deq_idx])
+		mdlist_pqueue_update_dqueue_idx(head);
+
 	return node;
 }
 
 struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
 {
-	uint32_t i;
-	uint32_t n_1d_keys = (1 << MDLIST_PQUEUE_DIM_1_SIZE) - 1;
+	uint8_t deq_idx;
 	struct mdlist_pqueue_node *node_2d = NULL;
 	struct mdlist_pqueue_node *node_3d = NULL;
 	struct mdlist_pqueue_node *node = NULL;
@@ -297,15 +318,15 @@ struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
 	if (!head)
 		return NULL;
 
-	/* Linear traversal until an element with an address is encountered */
-	for (i = 0; i < n_1d_keys && !head->child[i]; i++);
+	deq_idx = head->deq_idx;
 
-	/* List empty! */
-	if (n_1d_keys == i)
+	/* List empty: If the dequeue index is pointing to NULL, it indicates that
+	 * no enqueue has happened */
+	if (!head->child[deq_idx])
 		return NULL;
 
 	/* Extract the node */
-	node_2d = head->child[i];
+	node_2d = head->child[deq_idx];
 	node_3d = node_2d->child;
 	node = node_3d->child;
 
@@ -317,9 +338,13 @@ struct mdlist_pqueue_node *mdlist_pqueue_deq(struct mdlist_pqueue_head *head)
 	}
 
 	if (!node_2d->child) {
-		head->child[i] = node_2d->next;
+		head->child[deq_idx] = node_2d->next;
 		free(node_2d);
 	}
+
+	/* Update the deq_idx if the last node of this array element is deleted */
+	if (!head->child[deq_idx])
+		mdlist_pqueue_update_dqueue_idx(head);
 
 	return node;
 }
@@ -343,3 +368,8 @@ struct mdlist_pqueue_node *mdlist_pqueue_alloc_node(uint32_t key)
 	return node;
 }
 
+void mdlist_pqueue_init_head(struct mdlist_pqueue_head *head)
+{
+	/* Initialize it to the maximum value for the log to work */
+	head->deq_idx = 0xff;
+}

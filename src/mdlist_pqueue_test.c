@@ -6,7 +6,7 @@
 
 #include "mdlist_pqueue_coarse_lock.h"
 
-#define TEST_DEBUG
+//#define MDLIST_PQUEUE_DEBUG
 
 #define N_NODES		3
 #define N_THREADS	32
@@ -16,74 +16,79 @@ sem_t thread_wait_sem;
 
 struct mdlist_pqueue_head_coarse *myhead;
 
-void *test_thread(void *arg)
+void *test_thread(void *file)
 {
-	int i, j;
+	struct mdlist_pqueue_node *node;
+	unsigned long val;
+	FILE *trace_fp;
+	char tr_line[16];
 
-	struct mdlist_pqueue_node *nodes[N_NODES];
-	struct mdlist_pqueue_node *test_node;
+	trace_fp = fopen((char *) file, "r");
+	if (!trace_fp) {
+		perror("Unable to open the trace file ");
+		goto out;
+	}
 
-	for (j = 0; j < N_THREAD_LOOPS;  j++) {
-#ifdef TEST_DEBUG
-		printf("------------------------------------------\n");
-		printf("j = %d\n", j);
+	while (fgets(tr_line, 16, trace_fp)) {
+		if ('d' == tr_line[0]) {
+			node = mdlist_pqueue_coarse_deq(myhead);
+			if (!node) {
+#ifdef MDLIST_PQUEUE_DEBUG
+				printf("Queue empty\n");
 #endif
-
-		/* Examples of nodes created dynamically */
-		for (i = 0; i < N_NODES; i++) {
-			nodes[i] = mdlist_pqueue_alloc_node(i + 0x12345678);
-			if (nodes[i] && !mdlist_pqueue_coarse_enq(myhead, nodes[i])) {
-#ifdef TEST_DEBUG
-				printf("Enqueue: 0x%x\n", i + 0x12345678);
-#endif
-			}
-		}
-
-		/* Test if the list contains the nodes with the keys */
-		for (i = 0; i < N_NODES; i++) {
-			if (mdlist_pqueue_coarse_contains(myhead, i + 0x12345678)) {
-#ifdef TEST_DEBUG
-				printf("Contains: 0x%x\n", i + 0x12345678);
+			} else {
+#ifdef MDLIST_PQUEUE_DEBUG
+				printf("Dequeue: 0x%x\n", node->key);
 #endif
 			}
-		}
+		} else if('e' == tr_line[0]) {
+			sscanf(tr_line + 1, "%lu", &val);
 
-		/* Dequeue operations */
-		test_node = mdlist_pqueue_coarse_deq_key(myhead, 0x12346679);
-		if (test_node) {
-#ifdef TEST_DEBUG
-			printf("dequeue_key_node: 0x%x\n", test_node->key);
+			node = mdlist_pqueue_alloc_node((uint32_t) val);
+			if (!node)
+				continue;
+
+			if (mdlist_pqueue_coarse_enq(myhead, node)) {
+#ifdef MDLIST_PQUEUE_DEBUG
+				printf("Enqueue failed\n");
 #endif
-		}
-
-		for (i = 0; i < N_NODES + 1; i++) {
-			test_node = mdlist_pqueue_coarse_deq(myhead);
-			if (test_node) {
-#ifdef TEST_DEBUG
-				printf("dequeue_node: 0x%x\n", test_node->key);
+			} else {
+#ifdef MDLIST_PQUEUE_DEBUG
+				printf("Enqueue: 0x%x\n", val);
 #endif
 			}
-		}
+		} else if('c' == tr_line[0]) {
+			sscanf(tr_line + 1, "%lu", &val);
 
-		for (i = 0; i < N_NODES; i++) {
-			/* Leave the following line commented, as the same deallocated
-			 * are being created as new nodes which resulted in an infinite
-			 * traversal.
-			 */
-			/* TODO: Need to fix this issue */
-//			free(nodes[i]);
+			node = mdlist_pqueue_coarse_contains(myhead, (uint32_t) val);
+#ifdef MDLIST_PQUEUE_DEBUG
+			if (node) {
+				printf("Contains: 0x%x\n", node->key);
+			}
+#endif
+
+		} else {
+			fprintf(stderr, "Unknown trace record: %s\n", tr_line);
 		}
 	}
 
+out:
 	sem_post(&thread_wait_sem);
 
 	return NULL;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-	int i;
+	unsigned int i, n_threads;
 	pthread_t thrd;
+
+	if (argc != 3) {
+		printf("Usage: mdlist_pqueue_test <num_threads> <tracefile>\n");
+		return 0;
+	}
+
+	sscanf(argv[1], "%d", &n_threads);
 
 	myhead = mdlist_pqueue_coarse_alloc();
 	if (!myhead)
@@ -91,11 +96,11 @@ int main()
 
 	sem_init(&thread_wait_sem, 0, 0);
 
-	for (i = 0; i < N_THREADS; i++) {
-		pthread_create(&thrd, NULL, test_thread, NULL);
+	for (i = 0; i < n_threads; i++) {
+		pthread_create(&thrd, NULL, test_thread, argv[2]);
 	}
 
-	for (i = 0; i < N_THREADS; i++)
+	for (i = 0; i < n_threads; i++)
 		sem_wait(&thread_wait_sem);
 
 	mdlist_pqueue_coarse_dealloc(myhead);
